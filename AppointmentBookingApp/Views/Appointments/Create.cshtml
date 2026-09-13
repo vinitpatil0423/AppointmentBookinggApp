@@ -1,0 +1,272 @@
+﻿
+@model AppointmentBookingApp.Models.Appointment
+
+@{
+    ViewData["Title"] = "Book Appointment";
+}
+
+<div class="page-header">
+    <div>
+        <h2>Book Appointment</h2>
+        <p>Enter the patient and appointment details below.</p>
+    </div>
+</div>
+
+<div class="form-card">
+
+    <form asp-action="Create" method="post">
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly"
+             class="text-danger mb-3"></div>
+
+        <div class="row">
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="PatientName"
+                       class="form-label"></label>
+
+                <input asp-for="PatientName"
+                       class="form-control"
+                       placeholder="Enter patient name" />
+
+                <span asp-validation-for="PatientName"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="MobileNumber"
+                       class="form-label"></label>
+
+                <input asp-for="MobileNumber"
+                       class="form-control"
+                       placeholder="Enter 10-digit mobile number"
+                       maxlength="10" />
+
+                <span asp-validation-for="MobileNumber"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="DoctorName"
+                       class="form-label"></label>
+
+                <select asp-for="DoctorName"
+                        class="form-select">
+
+                    <option value="">Select Doctor</option>
+                    <option value="Dr. Amit Sharma">
+                        Dr. Amit Sharma
+                    </option>
+                    <option value="Dr. Priya Mehta">
+                        Dr. Priya Mehta
+                    </option>
+                    <option value="Dr. Rahul Deshmukh">
+                        Dr. Rahul Deshmukh
+                    </option>
+                    <option value="Dr. Neha Patil">
+                        Dr. Neha Patil
+                    </option>
+
+                </select>
+
+                <span asp-validation-for="DoctorName"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="col-12 mb-3">
+
+                <label asp-for="ReasonForVisit"
+                       class="form-label"></label>
+
+                <textarea asp-for="ReasonForVisit"
+                          id="reasonForVisit"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Briefly describe the reason for the appointment"></textarea>
+
+                <span asp-validation-for="ReasonForVisit"
+                      class="text-danger"></span>
+
+            </div>
+
+            <div class="col-12 mb-4">
+
+                <button type="button"
+                        id="generateSummaryBtn"
+                        class="btn btn-secondary">
+
+                    ✨ Generate AI Summary
+
+                </button>
+
+                <span id="aiLoading"
+                      class="ms-2 text-muted"
+                      style="display:none;">
+
+                    Generating summary...
+
+                </span>
+
+            </div>
+
+            <div class="col-12 mb-3"
+                 id="summaryContainer"
+                 style="display:none;">
+
+                <label class="form-label">
+                    AI Appointment Summary
+                </label>
+
+                <div class="ai-summary-box"
+                     id="aiSummary">
+                </div>
+
+                <input asp-for="AiSummary"
+                       type="hidden"
+                       id="aiSummaryInput" />
+
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label asp-for="AppointmentDate"
+                       class="form-label"></label>
+
+                <input asp-for="AppointmentDate"
+                       class="form-control" />
+
+                <span asp-validation-for="AppointmentDate"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label asp-for="AppointmentTime"
+                       class="form-label"></label>
+
+                <input asp-for="AppointmentTime"
+                       class="form-control"
+                       type="time" />
+
+                <span asp-validation-for="AppointmentTime"
+                      class="text-danger"></span>
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+
+            <a asp-action="Index"
+               class="btn btn-light">
+                Back
+            </a>
+
+            <button type="submit"
+                    class="btn btn-primary">
+                Book Appointment
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+
+        document.getElementById("generateSummaryBtn")
+            .addEventListener("click", async function () {
+
+                const reason =
+                    document.getElementById("reasonForVisit").value.trim();
+
+                const loading =
+                    document.getElementById("aiLoading");
+
+                const summaryContainer =
+                    document.getElementById("summaryContainer");
+
+                const summary =
+                    document.getElementById("aiSummary");
+
+                if (!reason) {
+
+                    alert("Please enter the reason for visit first.");
+
+                    return;
+                }
+
+                loading.style.display = "inline";
+
+                summaryContainer.style.display = "none";
+
+                this.disabled = true;
+
+                try {
+
+                    const token =
+                        document.querySelector(
+                            'input[name="__RequestVerificationToken"]'
+                        ).value;
+
+                    const response =
+                        await fetch(
+                            '@Url.Action("GenerateSummary", "Appointments")',
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/x-www-form-urlencoded"
+                                },
+
+                                body:
+                                    new URLSearchParams({
+                                        reasonForVisit: reason,
+                                        __RequestVerificationToken: token
+                                    })
+                            }
+                        );
+
+                    const data = await response.json();
+
+                    if (data.success) {
+
+                        summary.textContent = data.summary;
+                        document.getElementById("aiSummaryInput").value = data.summary;
+
+                        summaryContainer.style.display = "block";
+
+                    }
+                    else {
+
+                        alert(data.message);
+
+                    }
+
+                }
+                catch (error) {
+
+                    alert(
+                        "Unable to generate AI summary. Please try again."
+                    );
+
+                }
+                finally {
+
+                    loading.style.display = "none";
+
+                    this.disabled = false;
+
+                }
+
+            });
+
+    </script>
+}
